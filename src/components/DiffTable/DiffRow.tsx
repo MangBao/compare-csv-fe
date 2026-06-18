@@ -54,22 +54,6 @@ export const DiffRow = React.memo(function DiffRow({
       style={style}
       className={`flex items-stretch border-b border-zinc-100 ${rowBg} hover:bg-zinc-800/[0.02] active:bg-zinc-800/[0.04] cursor-pointer transition-colors duration-150`}
     >
-      {/* ── Status badge ────────────────────────────────────────────────────── */}
-      {(side === 'both' || side === 'base') && (
-        <div
-          role="cell"
-          className="flex-shrink-0 flex items-center justify-center border-r border-zinc-200 sticky left-0 z-10 bg-inherit"
-          style={{ width: STATUS_COL_WIDTH, height: ROW_HEIGHT }}
-        >
-          <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide flex items-center gap-1 border ${STATUS_BADGE[status]}`}
-          >
-            {getStatusIcon(status)}
-            {STATUS_LABEL[status]}
-          </span>
-        </div>
-      )}
-
       {/* ── Base pane ───────────────────────────────────────────────────────── */}
       {(side === 'both' || side === 'base') && (
         <Pane

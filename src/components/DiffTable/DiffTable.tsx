@@ -87,7 +87,7 @@ export function DiffTable({ jobId, stats, baseFileName, targetFileName, onReset 
 
   // ── Column width calculation ─────────────────────────────────────────────────
   const paneMinWidth = columns.length * MIN_COL_WIDTH;
-  const leftMinWidth = STATUS_COL_WIDTH + paneMinWidth;
+  const leftMinWidth = paneMinWidth;
   const rightMinWidth = paneMinWidth;
 
   // ── Synced Scrolling Refs ──────────────────────────────────────────────────
@@ -98,39 +98,44 @@ export function DiffTable({ jobId, stats, baseFileName, targetFileName, onReset 
   const isSyncingLeftScroll = useRef(false);
   const isSyncingRightScroll = useRef(false);
 
-  const handleLeftScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    // Sync vertical to right pane
-    if (!isSyncingLeftScroll.current) {
-      isSyncingRightScroll.current = true;
-      if (rightScrollRef.current) {
-        rightScrollRef.current.scrollTop = e.currentTarget.scrollTop;
+  useEffect(() => {
+    const left = leftScrollRef.current;
+    const right = rightScrollRef.current;
+
+    if (!left || !right) return;
+
+    const onLeftScroll = () => {
+      if (!isSyncingLeftScroll.current) {
+        isSyncingRightScroll.current = true;
+        right.scrollTop = left.scrollTop;
+      } else {
+        isSyncingLeftScroll.current = false;
       }
-    } else {
-      isSyncingLeftScroll.current = false;
-    }
-
-    // Sync horizontal to left header
-    if (leftHeaderRef.current) {
-      leftHeaderRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-  };
-
-  const handleRightScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    // Sync vertical to left pane
-    if (!isSyncingRightScroll.current) {
-      isSyncingLeftScroll.current = true;
-      if (leftScrollRef.current) {
-        leftScrollRef.current.scrollTop = e.currentTarget.scrollTop;
+      if (leftHeaderRef.current) {
+        leftHeaderRef.current.scrollLeft = left.scrollLeft;
       }
-    } else {
-      isSyncingRightScroll.current = false;
-    }
+    };
 
-    // Sync horizontal to right header
-    if (rightHeaderRef.current) {
-      rightHeaderRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-  };
+    const onRightScroll = () => {
+      if (!isSyncingRightScroll.current) {
+        isSyncingLeftScroll.current = true;
+        left.scrollTop = right.scrollTop;
+      } else {
+        isSyncingRightScroll.current = false;
+      }
+      if (rightHeaderRef.current) {
+        rightHeaderRef.current.scrollLeft = right.scrollLeft;
+      }
+    };
+
+    left.addEventListener('scroll', onLeftScroll, { passive: true });
+    right.addEventListener('scroll', onRightScroll, { passive: true });
+
+    return () => {
+      left.removeEventListener('scroll', onLeftScroll);
+      right.removeEventListener('scroll', onRightScroll);
+    };
+  }, [columns.length]);
   const handleFilterChange = (value: DiffStatus | '') => {
     actions.reset();
     setStatusFilter(value === '' ? null : value);
@@ -312,12 +317,6 @@ export function DiffTable({ jobId, stats, baseFileName, targetFileName, onReset 
                 ref={leftHeaderRef}
               >
                 <div className="flex bg-zinc-50" style={{ width: leftMinWidth }}>
-                  <div
-                    className="flex-shrink-0 border-r border-zinc-200 text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-center bg-zinc-50 sticky left-0 z-10"
-                    style={{ width: STATUS_COL_WIDTH, height: 36 }}
-                  >
-                    Status
-                  </div>
                   {/* Base Columns */}
                   {columns.map((col) => (
                     <div
@@ -338,7 +337,6 @@ export function DiffTable({ jobId, stats, baseFileName, targetFileName, onReset 
           <div
             ref={leftScrollRef}
             className="flex-1 overflow-auto"
-            onScroll={handleLeftScroll}
             style={{ contain: 'strict' }}
           >
             <div
@@ -419,7 +417,6 @@ export function DiffTable({ jobId, stats, baseFileName, targetFileName, onReset 
           <div
             ref={rightScrollRef}
             className="flex-1 overflow-auto"
-            onScroll={handleRightScroll}
             style={{ contain: 'strict' }}
           >
             <div
