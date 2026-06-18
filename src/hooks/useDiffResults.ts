@@ -14,6 +14,7 @@ export interface UseDiffResultsState {
   columns: string[];
   isLoading: boolean;
   isFetchingMore: boolean;
+  isFetched: boolean;
   hasNextPage: boolean;
   totalRows: number;
   error: string | null;
@@ -30,6 +31,7 @@ const INITIAL_STATE: UseDiffResultsState = {
   columns: [],
   isLoading: false,
   isFetchingMore: false,
+  isFetched: false,
   hasNextPage: false,
   totalRows: 0,
   error: null,
@@ -109,6 +111,7 @@ export function useDiffResults(
             columns,
             isLoading: false,
             isFetchingMore: false,
+            isFetched: true,
             hasNextPage: json.meta.hasNextPage,
             totalRows: json.meta.totalRows,
           };

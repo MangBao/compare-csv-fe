@@ -1,21 +1,30 @@
 import React, { useRef, useState } from 'react';
+import { 
+  ArrowsLeftRight, 
+  FileCsv, 
+  CloudArrowUp, 
+  X, 
+  CheckCircle, 
+  CircleNotch, 
+  Warning 
+} from '@phosphor-icons/react';
 import type { DiffJobResponse, DiffStats } from '../types/diff.types';
 
 interface UploadFormProps {
-  onSuccess: (jobId: string, stats: DiffStats) => void;
+  onSuccess: (jobId: string, stats: DiffStats, headers: string[], baseFileName: string, targetFileName: string) => void;
 }
 
 interface FileState {
   file: File | null;
   name: string;
+  size: number | null;
 }
 
-const EMPTY_FILE: FileState = { file: null, name: '' };
+const EMPTY_FILE: FileState = { file: null, name: '', size: null };
 
 export function UploadForm({ onSuccess }: UploadFormProps) {
   const [base, setBase] = useState<FileState>(EMPTY_FILE);
   const [target, setTarget] = useState<FileState>(EMPTY_FILE);
-  const [primaryKey, setPrimaryKey] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,12 +35,35 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
     (setter: React.Dispatch<React.SetStateAction<FileState>>) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0] ?? null;
-      setter({ file, name: file?.name ?? '' });
+      setter({ 
+        file, 
+        name: file?.name ?? '', 
+        size: file?.size ?? null 
+      });
+    };
+
+  const handleFileSelect = 
+    (setter: React.Dispatch<React.SetStateAction<FileState>>) => 
+    (file: File) => {
+      setter({ 
+        file, 
+        name: file.name, 
+        size: file.size 
+      });
+    };
+
+  const handleClearFile = 
+    (setter: React.Dispatch<React.SetStateAction<FileState>>, inputRef: React.RefObject<HTMLInputElement | null>) => 
+    () => {
+      setter(EMPTY_FILE);
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
     };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!base.file || !target.file || !primaryKey.trim()) return;
+    if (!base.file || !target.file) return;
 
     setIsUploading(true);
     setError(null);
@@ -39,7 +71,6 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
     const formData = new FormData();
     formData.append('base', base.file);
     formData.append('target', target.file);
-    formData.append('primaryKey', primaryKey.trim());
 
     try {
       const res = await fetch('/api/diff', {
@@ -53,7 +84,7 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
         throw new Error(json.error ?? `Server error ${res.status}`);
       }
 
-      onSuccess(json.jobId, json.stats);
+      onSuccess(json.jobId, json.stats, json.headers ?? [], base.file.name, target.file.name);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {
@@ -61,82 +92,77 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
     }
   };
 
-  const isValid = base.file !== null && target.file !== null && primaryKey.trim() !== '';
+  const isValid = base.file !== null && target.file !== null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-lg">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white text-2xl mb-4 shadow-lg">
-            ⇄
+    <div className="min-h-screen bg-zinc-50 bg-dot-grid flex items-center justify-center p-6 select-none">
+      <div className="w-full max-w-xl transition-all duration-300">
+        
+        {/* Header section with brand alignment */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-900 text-white mb-5 shadow-lg border border-zinc-800 hover:scale-105 transition-transform duration-200">
+            <ArrowsLeftRight className="w-7 h-7" weight="bold" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight leading-none">
             CSV Diff Viewer
           </h1>
-          <p className="mt-2 text-gray-500 text-sm">
-            Compare two CSV files and inspect the differences row by row.
+          <p className="mt-3 text-zinc-500 text-sm max-w-[40ch] mx-auto">
+            Upload two CSV files to compare row by row and inspect modifications, additions, and deletions.
           </p>
         </div>
 
+        {/* Form panel */}
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-5"
+          className="bg-white/80 backdrop-blur-md rounded-2xl border border-zinc-200/80 shadow-xl p-8 space-y-6"
         >
-          {/* Base file */}
+          {/* Base File DropZone */}
           <FileDropZone
-            label="Base File"
-            description="The original reference file"
-            fileName={base.name}
+            label="Base File (Reference)"
+            description="The original version to compare against"
+            fileState={base}
             inputRef={baseInputRef}
             onChange={handleFileChange(setBase)}
-            accentColor="blue"
+            onFileSelect={handleFileSelect(setBase)}
+            onClear={handleClearFile(setBase, baseInputRef)}
+            accentColor="emerald"
           />
 
-          {/* Target file */}
+          {/* Target File DropZone */}
           <FileDropZone
-            label="Target File"
-            description="The new file to compare against"
-            fileName={target.name}
+            label="Target File (Modified)"
+            description="The newer version containing edits"
+            fileState={target}
             inputRef={targetInputRef}
             onChange={handleFileChange(setTarget)}
-            accentColor="violet"
+            onFileSelect={handleFileSelect(setTarget)}
+            onClear={handleClearFile(setTarget, targetInputRef)}
+            accentColor="indigo"
           />
 
-          {/* Primary key */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Primary Key Column
-            </label>
-            <input
-              type="text"
-              value={primaryKey}
-              onChange={(e) => setPrimaryKey(e.target.value)}
-              placeholder="e.g. id, sku, email"
-              className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-            />
-            <p className="mt-1 text-xs text-gray-400">
-              The column that uniquely identifies each row across both files.
-            </p>
-          </div>
+          {/* Primary Key Input removed */}
 
-          {/* Error */}
+          {/* Error Message with Warning Icon */}
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
+            <div className="rounded-xl bg-rose-50 border border-rose-100 p-4 text-xs text-rose-700 flex items-start gap-3">
+              <Warning className="w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5" weight="fill" />
+              <div>
+                <p className="font-semibold">Comparison failed</p>
+                <p className="mt-0.5 text-rose-600/90">{error}</p>
+              </div>
             </div>
           )}
 
-          {/* Submit */}
+          {/* Submit Button with Tactile Hover/Active effects */}
           <button
             type="submit"
             disabled={!isValid || isUploading}
-            className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-3.5 px-4 rounded-xl bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-zinc-900 disabled:active:scale-100 transition-all duration-150 shadow-md shadow-zinc-900/10"
           >
             {isUploading ? (
               <span className="flex items-center justify-center gap-2">
-                <Spinner />
-                Comparing files…
+                <CircleNotch className="w-4 h-4 animate-spin" weight="bold" />
+                Comparing datasets…
               </span>
             ) : (
               'Compare Files'
@@ -148,59 +174,147 @@ export function UploadForm({ onSuccess }: UploadFormProps) {
   );
 }
 
-// ─── FileDropZone ─────────────────────────────────────────────────────────────
+// ─── FileDropZone Component ───────────────────────────────────────────────────
 
 interface FileDropZoneProps {
   label: string;
   description: string;
-  fileName: string;
+  fileState: FileState;
   inputRef: React.RefObject<HTMLInputElement | null>;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  accentColor: 'blue' | 'violet';
+  onFileSelect: (file: File) => void;
+  onClear: () => void;
+  accentColor: 'emerald' | 'indigo';
 }
 
 function FileDropZone({
   label,
   description,
-  fileName,
+  fileState,
   inputRef,
   onChange,
+  onFileSelect,
+  onClear,
   accentColor,
 }: FileDropZoneProps) {
-  const ringColor =
-    accentColor === 'blue' ? 'focus-within:ring-blue-500' : 'focus-within:ring-violet-500';
-  const iconBg =
-    accentColor === 'blue' ? 'bg-blue-50 text-blue-500' : 'bg-violet-50 text-violet-500';
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setIsDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        onFileSelect(file);
+      }
+    }
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (bytes === null) return '';
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const getAccentStyles = () => {
+    if (accentColor === 'emerald') {
+      return {
+        bg: 'bg-emerald-50 text-emerald-600',
+        ring: 'focus-within:ring-emerald-500/10 focus-within:border-emerald-500',
+        dragActive: 'border-emerald-500 bg-emerald-50/50 scale-[1.01]',
+        hover: 'hover:border-emerald-400 hover:bg-emerald-50/20',
+      };
+    }
+    return {
+      bg: 'bg-indigo-50 text-indigo-600',
+      ring: 'focus-within:ring-indigo-500/10 focus-within:border-indigo-500',
+      dragActive: 'border-indigo-500 bg-indigo-50/50 scale-[1.01]',
+      hover: 'hover:border-indigo-400 hover:bg-indigo-50/20',
+    };
+  };
+
+  const styles = getAccentStyles();
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+    <div className="space-y-2">
+      <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider">
         {label}
       </label>
       <div
-        onClick={() => inputRef.current?.click()}
-        className={`relative flex items-center gap-3 rounded-lg border border-dashed border-gray-300 px-4 py-3 cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition focus-within:ring-2 ${ringColor} focus-within:border-transparent`}
+        onClick={() => {
+          if (!fileState.file) inputRef.current?.click();
+        }}
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
+        onDragLeave={handleDrag}
+        onDrop={handleDrop}
+        className={`relative flex items-center gap-4 rounded-xl border border-dashed border-zinc-200 px-5 py-4 cursor-pointer transition-all duration-200 focus-within:ring-4 ${
+          styles.ring
+        } ${isDragActive ? styles.dragActive : styles.hover} ${
+          fileState.file ? 'cursor-default border-zinc-200 bg-zinc-50/30' : ''
+        }`}
       >
-        <span className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-base ${iconBg}`}>
-          📄
-        </span>
+        <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-lg ${styles.bg}`}>
+          {fileState.file ? (
+            <FileCsv className="w-6 h-6" weight="duotone" />
+          ) : (
+            <CloudArrowUp className="w-6 h-6" />
+          )}
+        </div>
+        
         <div className="min-w-0 flex-1">
-          {fileName ? (
-            <p className="text-sm font-medium text-gray-900 truncate">{fileName}</p>
+          {fileState.file ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="min-w-0 flex-1 pr-4">
+                <p className="text-sm font-semibold text-zinc-900 truncate">
+                  {fileState.name}
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  {formatFileSize(fileState.size)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" weight="fill" />
+                  Ready
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClear();
+                  }}
+                  className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors active:scale-90"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           ) : (
             <>
-              <p className="text-sm text-gray-700">
-                Click to upload <span className="font-medium">.csv</span> file
+              <p className="text-sm font-semibold text-zinc-700">
+                Drag & drop or <span className={accentColor === 'emerald' ? 'text-emerald-600 font-bold' : 'text-indigo-600 font-bold'}>browse</span>
               </p>
-              <p className="text-xs text-gray-400">{description}</p>
+              <p className="text-xs text-zinc-400 mt-0.5">{description}</p>
             </>
           )}
         </div>
-        {fileName && (
-          <span className="flex-shrink-0 text-xs font-medium text-green-600 bg-green-50 rounded-full px-2 py-0.5">
-            Ready
-          </span>
-        )}
+        
         <input
           ref={inputRef}
           type="file"
@@ -210,32 +324,5 @@ function FileDropZone({
         />
       </div>
     </div>
-  );
-}
-
-// ─── Spinner ──────────────────────────────────────────────────────────────────
-
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin h-4 w-4 text-white"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
   );
 }

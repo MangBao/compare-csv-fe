@@ -6,8 +6,7 @@ export type CsvRow = Record<string, string>;
 
 export interface DiffRecord {
   status: DiffStatus;
-  primaryKey: string;
-  primaryKeyValue: string;
+  rowIndex: number;
   targetRow?: CsvRow;
   baseRow?: CsvRow;
 }
@@ -28,6 +27,8 @@ export interface DiffJobResponse {
   outputFile: string;
   stats: DiffStats;
   durationMs: number;
+  /** Column names discovered in the base CSV file */
+  headers: string[];
 }
 
 // ─── GET /api/diff/results ────────────────────────────────────────────────────
