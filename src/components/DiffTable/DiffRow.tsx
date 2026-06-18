@@ -1,19 +1,10 @@
 import React from 'react';
-import { 
-  Plus, 
-  Minus, 
-  PencilSimple, 
-  Check 
-} from '@phosphor-icons/react';
-import type { DiffRecord, CsvRow, DiffStatus } from '../../types/diff.types';
+
+import type { DiffRecord, CsvRow } from '../../types/diff.types';
 import {
-  STATUS_LABEL,
   STATUS_ROW_BG,
-  STATUS_BADGE,
   STATUS_CELL_MODIFIED,
-  STATUS_COL_WIDTH,
   MIN_COL_WIDTH,
-  ROW_HEIGHT,
 } from './constants';
 
 interface DiffRowProps {
@@ -34,25 +25,12 @@ export const DiffRow = React.memo(function DiffRow({
   const { status, baseRow, targetRow } = record;
   const rowBg = STATUS_ROW_BG[status];
 
-  const getStatusIcon = (rowStatus: DiffStatus) => {
-    switch (rowStatus) {
-      case 'ADDED':
-        return <Plus className="w-3 h-3 flex-shrink-0 text-emerald-600" weight="bold" />;
-      case 'DELETED':
-        return <Minus className="w-3 h-3 flex-shrink-0 text-rose-600" weight="bold" />;
-      case 'MODIFIED':
-        return <PencilSimple className="w-3 h-3 flex-shrink-0 text-amber-600" weight="bold" />;
-      default:
-        return <Check className="w-3 h-3 flex-shrink-0 text-zinc-400" weight="bold" />;
-    }
-  };
-
   return (
     <div
       role="row"
       onClick={onClick}
       style={style}
-      className={`flex items-stretch border-b border-zinc-100 ${rowBg} hover:bg-zinc-800/[0.02] active:bg-zinc-800/[0.04] cursor-pointer transition-colors duration-150`}
+      className={`flex items-stretch border-b border-zinc-100 dark:border-zinc-800 ${rowBg} hover:bg-zinc-800/[0.02] dark:hover:bg-white/[0.02] active:bg-zinc-800/[0.04] dark:active:bg-white/[0.04] cursor-pointer transition-colors duration-150`}
     >
       {/* ── Base pane ───────────────────────────────────────────────────────── */}
       {(side === 'both' || side === 'base') && (
@@ -66,7 +44,7 @@ export const DiffRow = React.memo(function DiffRow({
       )}
 
       {/* ── Divider ─────────────────────────────────────────────────────────── */}
-      {side === 'both' && <div className="flex-shrink-0 w-px bg-zinc-200 self-stretch" />}
+      {side === 'both' && <div className="flex-shrink-0 w-px bg-zinc-200 dark:bg-zinc-800 self-stretch" />}
 
       {/* ── Target pane ─────────────────────────────────────────────────────── */}
       {(side === 'both' || side === 'target') && (
@@ -98,7 +76,7 @@ function Pane({ row, compareRow, columns, side, status }: PaneProps) {
     (side === 'target' && status === 'DELETED');
 
   return (
-    <div className="flex items-stretch flex-1">
+    <div className={`flex flex-shrink-0 ${isEmpty ? 'bg-zinc-100/50 dark:bg-zinc-900/50' : ''}`} style={{ minWidth: columns.length * MIN_COL_WIDTH }}>
       {columns.map((col) => {
         const value = row?.[col] ?? '';
         const compareValue = compareRow?.[col] ?? '';
@@ -107,17 +85,27 @@ function Pane({ row, compareRow, columns, side, status }: PaneProps) {
         const isCellModified =
           side === 'target' && status === 'MODIFIED' && value !== compareValue;
 
+        const isRowModified = status === 'MODIFIED';
+
+        let bgColor = '';
+        let textColor = 'text-zinc-600 dark:text-zinc-400';
+
+        if (isCellModified) {
+          bgColor = STATUS_CELL_MODIFIED;
+          textColor = 'text-zinc-900 dark:text-zinc-100';
+        } else if (isRowModified) {
+          textColor = 'text-zinc-700 dark:text-zinc-300';
+        }
+
         return (
           <div
             key={col}
             role="cell"
             title={value || undefined}
-            style={{ minWidth: MIN_COL_WIDTH, height: ROW_HEIGHT }}
-            className={`flex-1 flex items-center px-4 text-xs text-zinc-700 border-r border-zinc-100 overflow-hidden truncate font-mono ${
-              isEmpty ? 'opacity-0' : ''
-            } ${isCellModified ? STATUS_CELL_MODIFIED : ''}`}
+            className={`flex-shrink-0 flex items-center px-4 py-3 text-sm border-r border-zinc-100 dark:border-zinc-800/50 ${bgColor} ${textColor} ${isEmpty ? 'opacity-0' : ''}`}
+            style={{ width: MIN_COL_WIDTH }}
           >
-            {isEmpty ? '' : value || <em className="text-zinc-300 not-italic">-</em>}
+            <span className="truncate">{value}</span>
           </div>
         );
       })}

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 /* Ensure the app fills the viewport without triggering body scroll */
 html,
 body,
@@ -9,12 +11,28 @@ body,
   padding: 0;
 }
 
-/* Improve font rendering */
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--color-zinc-900);
+  background-color: var(--color-zinc-50);
+}
+
+html.dark body {
+  color: var(--color-zinc-100);
+  background-color: var(--color-zinc-950);
+}
+
+/* global transition for all components */
+*, ::before, ::after {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
 }
 
 /* High-end clean scrollbars for workspace density */
@@ -34,15 +52,27 @@ body {
   background-clip: padding-box;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-zinc-700);
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-zinc-300);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-zinc-600);
+}
+
 /* Dot grid background pattern */
 .bg-dot-grid {
   background-image: radial-gradient(circle, var(--color-zinc-200) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+html.dark .bg-dot-grid {
+  background-image: radial-gradient(circle, var(--color-zinc-800) 1px, transparent 1px);
 }
 

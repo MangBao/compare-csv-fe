@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { UploadForm } from './components/UploadForm';
 import { DiffTable } from './components/DiffTable/DiffTable';
+import { useTheme } from './hooks/useTheme';
+import { Toaster } from 'sonner';
 import type { DiffStats } from './types/diff.types';
 
 interface DiffSession {
@@ -34,6 +36,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 
 export function App() {
   const [session, setSession] = useState<DiffSession | null>(null);
+  const { theme } = useTheme();
 
   const handleSuccess = (
     jobId: string,
@@ -51,7 +54,8 @@ export function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen w-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900 selection:bg-zinc-200">
+      <Toaster position="bottom-right" richColors theme={theme} />
+      <div className="h-screen w-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden font-sans text-zinc-900 dark:text-zinc-100 selection:bg-zinc-200 dark:selection:bg-zinc-800 relative">
         {session ? (
           <DiffTable
             jobId={session.jobId}
